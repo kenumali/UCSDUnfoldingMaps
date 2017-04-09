@@ -1,5 +1,7 @@
 # UCSDUnfoldingMaps
 Real world earthquake data visualization using Unfolding Maps library and Processing GUI
+Earthquake data from https://earthquake.usgs.gov/earthquakes/
+Processing - https://processing.org
 
 unfolding_app_template and UC San Diego/Coursera MOOC starter code
 ==================================================================
