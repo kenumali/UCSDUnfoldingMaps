@@ -41,11 +41,23 @@ public abstract class CommonMarker extends SimplePointMarker {
 		// For starter code just drawMaker(...)
 		if (!hidden) {
 			drawMarker(pg, x, y);
-			if (selected) {
-				showTitle(pg, x, y);  // You will implement this in the subclasses
+//			if (selected) {
+//				showTitle(pg, x, y);  // You will implement this in the subclasses
+//			}
+		}
+	}
+	
+	//Draw the title on top of a marker if it has been hovered
+	public void drawTitleOnTop(PGraphics pg, float x, float y) {
+		if(!hidden) {
+			if(selected) {
+				showTitle(pg, x, y);
+			} else {
+				pg.clear();
 			}
 		}
 	}
+	
 	public abstract void drawMarker(PGraphics pg, float x, float y);
 	public abstract void showTitle(PGraphics pg, float x, float y);
 }

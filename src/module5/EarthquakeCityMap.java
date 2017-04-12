@@ -20,7 +20,7 @@ import processing.core.PApplet;
 /** EarthquakeCityMap
  * An application with an interactive map displaying earthquake data.
  * Author: UC San Diego Intermediate Software Development MOOC team
- * @author Your name here
+ * @author Kenneth
  * Date: July 17, 2015
  * */
 public class EarthquakeCityMap extends PApplet {
@@ -61,6 +61,8 @@ public class EarthquakeCityMap extends PApplet {
 	// NEW IN MODULE 5
 	private CommonMarker lastSelected;
 	private CommonMarker lastClicked;
+	
+	private PGraphics buffer;
 	
 	public void setup() {		
 		// (1) Initializing canvas and map tiles
@@ -105,7 +107,7 @@ public class EarthquakeCityMap extends PApplet {
 	    }
 
 	    // could be used for debugging
-	    printQuakes();
+//	    printQuakes();
 	 		
 	    // (3) Add markers to map
 	    //     NOTE: Country markers are not added to the map.  They are used
@@ -117,10 +119,16 @@ public class EarthquakeCityMap extends PApplet {
 	
 	
 	public void draw() {
+		buffer.beginDraw();
 		background(0);
 		map.draw();
+		buffer.endDraw();
+		image(buffer, 0, 0);
 		addKey();
-		
+		buffer.clear();
+		if(lastSelected != null) {
+			lastSelected.drawTitleOnTop(buffer, mouseX, mouseY);
+		}
 	}
 	
 	/** Event handler that gets called automatically when the 
@@ -146,6 +154,13 @@ public class EarthquakeCityMap extends PApplet {
 	private void selectMarkerIfHover(List<Marker> markers)
 	{
 		// TODO: Implement this method
+		for(Marker marker : markers) {
+			if(marker.isInside(map, mouseX, mouseY) && lastSelected == null) {
+				lastSelected = (CommonMarker) marker;
+				lastSelected.setSelected(true);
+				break;
+			}
+		}
 	}
 	
 	/** The event handler for mouse clicks
@@ -159,8 +174,69 @@ public class EarthquakeCityMap extends PApplet {
 		// TODO: Implement this method
 		// Hint: You probably want a helper method or two to keep this code
 		// from getting too long/disorganized
+		if(lastClicked != null) {
+			lastClicked.setClicked(false);
+			lastClicked = null;
+			unhideMarkers();
+		} else {
+			checkMarkersForClick(quakeMarkers);
+			checkMarkersForClick(cityMarkers);
+			if(lastClicked instanceof EarthquakeMarker) {
+				hideOtherMarkers(quakeMarkers);
+				hideCityMarkers(cityMarkers);
+			} else if(lastClicked instanceof CityMarker) {
+				hideOtherMarkers(cityMarkers);
+				hideQuakeMarkers(quakeMarkers);
+			}
+		}
 	}
 	
+	//Hide city markers if outside threat circle
+	private void hideCityMarkers(List<Marker> cities) {
+		for(Marker city : cities) {
+			if(city.getDistanceTo(lastClicked.getLocation()) > ((EarthquakeMarker) lastClicked).threatCircle()) {
+				city.setHidden(true);
+				
+			} else { 
+				city.setHidden(false);
+			}
+		}
+	}
+	
+	//Hide earthquake markers if outside threat circle
+	private void hideQuakeMarkers(List<Marker> earthquakes) {
+		for(Marker earthquake : earthquakes) {
+			if(earthquake.getDistanceTo(lastClicked.getLocation()) > ((EarthquakeMarker) earthquake).threatCircle()) {
+				earthquake.setHidden(true);
+			} else {
+				earthquake.setHidden(false);
+			}
+		}
+	}
+	
+	//Hide other markers except the one that has been clicked
+	private void hideOtherMarkers(List<Marker> markers) {
+		for(Marker marker : markers) {
+			if(marker != lastClicked) {
+				marker.setHidden(true);
+			}
+		}
+	} 
+	
+	//checks if a marker has been clicked
+	private void checkMarkersForClick(List<Marker> markers) {
+		// TODO Auto-generated method stub
+		for(Marker marker : markers) {
+			if(lastClicked != null) {
+				break;
+			}
+			if(!marker.isHidden() && marker.isInside(map, mouseX, mouseY)) {
+				lastClicked = (CommonMarker) marker;
+				lastClicked.setClicked(true);
+				break;
+			}
+		}
+	}
 	
 	// loop over and unhide all markers
 	private void unhideMarkers() {
