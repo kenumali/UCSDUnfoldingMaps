@@ -458,6 +458,9 @@ public class EarthquakeCityMap extends PApplet {
 			text(magnitude, xbase+17, ybase+140);
 			text(distance, xbase+17, ybase+155);
 			text(loc, xbase+17, ybase+170);
+		}  else {
+			textSize(14);
+			text("None", xbase+17, ybase+140);
 		}
 	}
 
