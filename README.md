@@ -3,6 +3,27 @@ Real world earthquake data visualization using Unfolding Maps library and Proces
 - Earthquake data from https://earthquake.usgs.gov/earthquakes/
 - Processing - https://processing.org
 
+# Module 6 contains the final output of the program.
+Capabilities includes:
+1. Keyboard shortcuts
+  - Change map providers
+  - Show only the recent earthquakes or show it all
+2. Mouse Hover
+  - Show a marker's detail drawn on top of other graphics
+  - Dynamic latitude and longitude on the lower right side of the map
+3. Mouse Clicks
+  - When clicking a city marker:
+    • Shows the airports within 50km
+    • Shows an earthquake if the city is affected by its threat circle
+    • Hides other city marker
+    • A popup menu appears on the left side of the map to show the count of nearby earthquakes, average magnitude, and the most recent earthquake occurred
+  - When clicking an earthquake marker:
+    • Shows a city marker if it is within its threat circle
+    • Shows airports affected by its threat circle
+    • Hides other earthquake marker
+  - When clicking an airport marker
+    • Hides other airport marker
+
 unfolding_app_template and UC San Diego/Coursera MOOC starter code
 ==================================================================
 
