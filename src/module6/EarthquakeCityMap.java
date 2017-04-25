@@ -2,16 +2,19 @@ package module6;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 
 import de.fhpotsdam.unfolding.UnfoldingMap;
 import de.fhpotsdam.unfolding.data.Feature;
 import de.fhpotsdam.unfolding.data.GeoJSONReader;
 import de.fhpotsdam.unfolding.data.PointFeature;
+import de.fhpotsdam.unfolding.data.ShapeFeature;
 import de.fhpotsdam.unfolding.geo.Location;
 import de.fhpotsdam.unfolding.marker.AbstractShapeMarker;
 import de.fhpotsdam.unfolding.marker.Marker;
 import de.fhpotsdam.unfolding.marker.MultiMarker;
+import de.fhpotsdam.unfolding.marker.SimpleLinesMarker;
 import de.fhpotsdam.unfolding.providers.AbstractMapProvider;
 import de.fhpotsdam.unfolding.providers.Google;
 import de.fhpotsdam.unfolding.providers.MBTilesMapProvider;
@@ -61,8 +64,6 @@ public class EarthquakeCityMap extends PApplet {
 	private AbstractMapProvider provider1;
 	private AbstractMapProvider provider2;
 	private AbstractMapProvider provider3;
-	private AbstractMapProvider provider4;
-	private AbstractMapProvider provider5;
 
 	// Markers for each city
 	private List<Marker> cityMarkers;
@@ -71,6 +72,11 @@ public class EarthquakeCityMap extends PApplet {
 
 	// A List of country markers
 	private List<Marker> countryMarkers;
+
+	//List of airport markers
+	private List<Marker> airportMarkers;
+	private HashMap<Integer, AirportMarker> airportRoutes;
+	List<Marker> routeList;
 
 	// NEW IN MODULE 5
 	private CommonMarker lastSelected;
@@ -96,11 +102,10 @@ public class EarthquakeCityMap extends PApplet {
 			//			map = new UnfoldingMap(this, 200, 50, 650, 600, new Google.GoogleMapProvider());
 			provider1 = new Microsoft.HybridProvider();
 			provider2 = new Google.GoogleMapProvider();
-			provider3 = new Microsoft.AerialProvider();
-			provider4 = new OpenStreetMap.OpenStreetMapProvider();
-			provider5 = new Google.GoogleTerrainProvider();
+			provider3 = new OpenStreetMap.OpenStreetMapProvider();
 			// IF YOU WANT TO TEST WITH A LOCAL FILE, uncomment the next line
 			//earthquakesURL = "2.5_week.atom";
+			//			earthquakesURL = "quiz2.atom";
 		}
 		map = new UnfoldingMap(this, 200, 50, 650, 600, provider1);
 		MapUtils.createDefaultEventDispatcher(this, map);
@@ -131,6 +136,50 @@ public class EarthquakeCityMap extends PApplet {
 				quakeMarkers.add(new OceanQuakeMarker(feature));
 			}
 		}
+		// STEP 4: read in airport data
+		List<PointFeature> features = ParseFeed.parseAirports(this, "airports.dat");
+		airportMarkers = new ArrayList<Marker>();
+		HashMap<Integer, Location> airports = new HashMap<Integer, Location>();
+
+		airportRoutes = new HashMap<Integer, AirportMarker>();
+
+		for(PointFeature feature : features) {
+			AirportMarker marker = new AirportMarker(feature);
+			marker.setRadius(5);
+			airportMarkers.add(marker);
+
+			// put airport in hashmap with OpenFlights unique id for key
+			airports.put(Integer.parseInt(feature.getId()), feature.getLocation());
+			airportRoutes.put(Integer.parseInt(feature.getId()), marker);
+		}
+
+		// parse route data
+		List<ShapeFeature> routes = ParseFeed.parseRoutes(this, "routes.dat");
+		routeList = new ArrayList<Marker>();
+		for(ShapeFeature route : routes) {
+
+			// get source and destination airportIds
+			int source = Integer.parseInt((String)route.getProperty("source"));
+			int dest = Integer.parseInt((String)route.getProperty("destination"));
+
+			// get locations for airports on route
+			if(airports.containsKey(source) && airports.containsKey(dest)) {
+				route.addLocation(airports.get(source));
+				route.addLocation(airports.get(dest));
+			}
+
+			SimpleLinesMarker sl = new SimpleLinesMarker(route.getLocations(), route.getProperties());
+			//			System.out.println(sl.getProperties());
+
+			//UNCOMMENT IF YOU WANT TO SEE ALL ROUTES
+			sl.setHidden(true);
+			routeList.add(sl);
+
+			if(airportRoutes.containsKey(source) && airportRoutes.containsKey(dest)) {
+				airportRoutes.get(source).addRoute(sl);
+				airportRoutes.get(dest).addRoute(sl);
+			}
+		}
 
 		// could be used for debugging
 		printQuakes();
@@ -138,12 +187,18 @@ public class EarthquakeCityMap extends PApplet {
 		// (3) Add markers to map
 		//     NOTE: Country markers are not added to the map.  They are used
 		//           for their geometric properties
+
+		//		map.addMarkers(countryMarkers);
+
+
+		//UNCOMMENT IF YOU WANT TO SEE ALL ROUTES
+		map.addMarkers(routeList);
+		map.addMarkers(airportMarkers);
 		map.addMarkers(quakeMarkers);
 		map.addMarkers(cityMarkers);
-
 		//Prints the top 'x' numbers of earthquakes depending on magnitude
 		//From large to smallest magnitude
-		sortAndPrint(10);
+		sortAndPrint(20);
 	}  // End setup
 
 
@@ -157,9 +212,7 @@ public class EarthquakeCityMap extends PApplet {
 		buffer.clear();
 
 		//Draw latitude and longitude in a rectangle below the map
-		Location location = map.getLocation(mouseX, mouseY);
-		fill(0);
-		text(location.getLat()+", "+location.getLon(), 685, 675);
+		addLocation();
 
 		if(lastSelected != null) {
 			lastSelected.drawTitleOnTop(buffer, mouseX, mouseY);
@@ -202,6 +255,7 @@ public class EarthquakeCityMap extends PApplet {
 		}
 		selectMarkerIfHover(quakeMarkers);
 		selectMarkerIfHover(cityMarkers);
+		selectMarkerIfHover(airportMarkers);
 	}
 
 	// If there is a marker under the cursor, and lastSelected is null 
@@ -213,7 +267,7 @@ public class EarthquakeCityMap extends PApplet {
 		if (lastSelected != null) {
 			return;
 		}
-		
+
 		for(Marker marker : markers) {
 			if(marker.isInside(map, mouseX, mouseY) && lastSelected == null) {
 				lastSelected = (CommonMarker) marker;
@@ -241,15 +295,34 @@ public class EarthquakeCityMap extends PApplet {
 			nearbyEarthquake = 0;
 			averageMagnitude = 0.0f;
 			mostRecent = null;
-		} else {
+			hideRouteMarkers();
+		} else if (lastClicked == null) {
 			checkMarkersForClick(quakeMarkers);
 			checkMarkersForClick(cityMarkers);
+			checkMarkersForClick(airportMarkers);
 			if(lastClicked instanceof EarthquakeMarker) {
 				hideOtherMarkers(quakeMarkers);
 				hideCityMarkers(cityMarkers);
+				hideAirportMarkers(airportMarkers);
 			} else if(lastClicked instanceof CityMarker) {
 				hideOtherMarkers(cityMarkers);
 				hideQuakeMarkers(quakeMarkers);
+				showNearestAirports(airportMarkers);
+			} else if(lastClicked instanceof AirportMarker) {
+				showRoutes();
+			}
+		}
+	}
+
+
+	private void showRoutes() {
+		for(Marker marker : airportMarkers) {
+			if(!marker.isHidden() && marker.isInside(map, mouseX, mouseY)) {
+				lastClicked = (CommonMarker) marker;
+				for(Marker line : ((AirportMarker)lastClicked).routes) {
+					line.setHidden(false);
+					line.setColor(0);
+				}
 			}
 		}
 	}
@@ -266,12 +339,8 @@ public class EarthquakeCityMap extends PApplet {
 		} else if(key == '3') {
 			map.mapDisplay.setProvider(provider3);
 		} else if(key == '4') {
-			map.mapDisplay.setProvider(provider4);
-		} else if(key == '5') {
-			map.mapDisplay.setProvider(provider5);
-		} else if(key == '6') { //show Past Hour earthquakes
 			showRecentEarthquakes();
-		} else if(key == '7') { //show earthquake markers only
+		} else if(key == '5') {
 			unhideMarkers();
 		}
 	}
@@ -282,6 +351,32 @@ public class EarthquakeCityMap extends PApplet {
 				earthquake.setHidden(false);
 			} else {
 				earthquake.setHidden(true);
+			}
+		}
+	}
+	private void showNearestAirports(List<Marker> airports) {
+		for(Marker airport : airports) {
+			if(airport.getDistanceTo(lastClicked.getLocation()) < 50) {
+				airport.setHidden(false);
+			} else {
+				airport.setHidden(true);
+			}
+		}
+	}
+
+	private void hideRouteMarkers() {
+		for(Marker route : routeList) {
+			route.setHidden(true);
+		}
+	}
+
+	//Hides airport markers that are not affected by an earthquake's threat circle
+	private void hideAirportMarkers(List<Marker> airports){
+		for(Marker airport : airports) {
+			if(airport.getDistanceTo(lastClicked.getLocation()) > ((EarthquakeMarker) lastClicked).threatCircle()) {
+				airport.setHidden(true);
+			} else {
+				airport.setHidden(false);
 			}
 		}
 	}
@@ -343,6 +438,10 @@ public class EarthquakeCityMap extends PApplet {
 		for(Marker marker : cityMarkers) {
 			marker.setHidden(false);
 		}
+
+		for(Marker marker : airportMarkers) {
+			marker.setHidden(false);
+		}
 	}
 
 	// helper method to draw key in GUI
@@ -353,37 +452,42 @@ public class EarthquakeCityMap extends PApplet {
 		int xbase = 25;
 		int ybase = 50;
 
-		rect(xbase, ybase, 150, 400);
+		rect(xbase, ybase, 150, 350);
 
 		fill(0);
 		textAlign(LEFT, CENTER);
 		textSize(12);
-		text("Earthquake Key", xbase+25, ybase+25);
+		text("Legend", xbase+50, ybase+15);
 
 		fill(150, 30, 30);
-		int tri_xbase = xbase + 35;
-		int tri_ybase = ybase + 50;
+		//		int tri_xbase = xbase + 35;
+		//		int tri_ybase = ybase + 50;
 		//		triangle(tri_xbase, tri_ybase-CityMarker.TRI_SIZE, tri_xbase-CityMarker.TRI_SIZE, 
 		//				tri_ybase+CityMarker.TRI_SIZE, tri_xbase+CityMarker.TRI_SIZE, 
 		//				tri_ybase+CityMarker.TRI_SIZE);
 
-		image(loadImage("ui/marker_red.png"), xbase+29, ybase+37, 25, 25);
+		image(loadImage("ui/marker_red.png"), xbase+29, ybase+22, 25, 25);
 
 		fill(0, 0, 0);
 		textAlign(LEFT, CENTER);
-		text("City Marker", tri_xbase + 15, tri_ybase);
+		text("City Marker", xbase + 50, ybase+35);
 
-		text("Land Quake", xbase+50, ybase+70);
-		text("Ocean Quake", xbase+50, ybase+90);
+		text("Airport", xbase+50, ybase+57);
+		fill(252, 103, 94);
+		noStroke();
+		ellipse(xbase+35, ybase+57, 10, 10);
+
+		fill(0);
+		text("Land Quake", xbase+50, ybase+77);
+		text("Ocean Quake", xbase+50, ybase+97);
 		text("Size ~ Magnitude", xbase+25, ybase+120);
 
+		stroke(0);
 		fill(255, 255, 255);
-		ellipse(xbase+35, 
-				ybase+70, 
-				10, 
-				10);
-		rect(xbase+35-5, ybase+90-5, 10, 10);
+		ellipse(xbase+35, ybase+77, 10, 10);
+		rect(xbase+35-5, ybase+97-5, 10, 10);
 
+		noStroke();
 		fill(color(255, 255, 0));
 		ellipse(xbase+35, ybase+140, 12, 12);
 		fill(color(0, 0, 255));
@@ -398,7 +502,7 @@ public class EarthquakeCityMap extends PApplet {
 		text("Deep", xbase+50, ybase+180);
 
 		text("Past hour", xbase+50, ybase+200);
-
+		stroke(0);
 		fill(255, 255, 255);
 		int centerx = xbase+35;
 		int centery = ybase+200;
@@ -413,21 +517,30 @@ public class EarthquakeCityMap extends PApplet {
 		text("Keyboard Shortcuts", xbase+17, ybase+230);
 		text("1 Hybrid", xbase+17, ybase+250);
 		text("2 GoogleMap", xbase+17, ybase+270);
-		text("3 Aerial", xbase+17, ybase+290);
-		text("4 OpenStreetMap", xbase+17, ybase+310);
-		text("5 GoogleTerrain", xbase+17, ybase+330);
-		text("6 Recent Earthquakes", xbase+17, ybase+350);
-		text("7 Show All", xbase+17, ybase+370);
+		text("3 OpenStreetMap", xbase+17, ybase+290);
+		text("4 Recent Earthquakes", xbase+17, ybase+310);
+		text("5 Show All", xbase+17, ybase+330);
 
-		fill(255);
-		rect(xbase+650, ybase+610, 175, 30);
+
 	}
 
+	//Draw latitude and longitude in a rectangle below the map
+	private void addLocation() {
+		int xbase = 25;
+		int ybase = 50;
+		fill(255);
+		rect(xbase+650, ybase+610, 175, 30);
+		Location location = map.getLocation(mouseX, mouseY);
+		fill(0);
+		text(location.getLat()+", "+location.getLon(), 685, 675);
+	}
+
+	//Draw a rectangle below the earthquake keys if a city marker has been clicked
 	private void popMenu() {
 		fill(255, 250, 240);
 
 		int xbase = 25;
-		int ybase = 460;
+		int ybase = 420;
 
 		rect(xbase, ybase, 150, 190);
 
@@ -458,7 +571,7 @@ public class EarthquakeCityMap extends PApplet {
 			text(magnitude, xbase+17, ybase+140);
 			text(distance, xbase+17, ybase+155);
 			text(loc, xbase+17, ybase+170);
-		}  else {
+		} else {
 			textSize(14);
 			text("None", xbase+17, ybase+140);
 		}
