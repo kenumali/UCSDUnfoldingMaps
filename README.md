@@ -24,7 +24,7 @@ Capabilities includes:
     - Shows airports affected by its threat circle
     - Hides other earthquake marker
   - When clicking an airport marker
-    - Draw a line to its routes
+    - Draw a line to its routes and hides other airports
 
 unfolding_app_template and UC San Diego/Coursera MOOC starter code
 ==================================================================
