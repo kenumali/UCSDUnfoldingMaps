@@ -3,7 +3,7 @@ Real world earthquake data visualization using Unfolding Maps library and Proces
 - Earthquake data from https://earthquake.usgs.gov/earthquakes/
 - Processing - https://processing.org
 
-![screenshot](https://cloud.githubusercontent.com/assets/17850273/25389401/658f8938-29c8-11e7-84be-db2ef52c384e.png)
+![screenshot](https://cloud.githubusercontent.com/assets/17850273/25435628/83dfcd9c-2a88-11e7-8343-1530f6970c2b.png)
 
 # Module 6 contains the final output of the program.
 Capabilities includes:
