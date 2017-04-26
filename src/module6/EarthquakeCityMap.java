@@ -316,13 +316,23 @@ public class EarthquakeCityMap extends PApplet {
 
 
 	private void showRoutes() {
+		ArrayList<String> routes = new ArrayList<String>();
 		for(Marker marker : airportMarkers) {
 			if(!marker.isHidden() && marker.isInside(map, mouseX, mouseY)) {
 				lastClicked = (CommonMarker) marker;
 				for(Marker line : ((AirportMarker)lastClicked).routes) {
 					line.setHidden(false);
 					line.setColor(0);
+					if(!routes.contains(line.getStringProperty("destination"))) {
+						routes.add(line.getStringProperty("destination"));
+					}
 				}
+			}
+		}
+		//Hides other airport markers if it doesn't have routes
+		for(Marker mk : airportMarkers) {
+			if(!routes.contains(mk.getStringProperty("id")) && mk != lastClicked) {
+				mk.setHidden(true);
 			}
 		}
 	}
